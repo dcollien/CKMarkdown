@@ -1164,7 +1164,13 @@ if (typeof exports === 'object') {
   return this || (typeof window !== 'undefined' ? window : global);
 }());
 
-
+/*
+ * to-markdown - an HTML to Markdown converter
+ *
+ * Copyright 2011, Dom Christie
+ * Licenced under the MIT licence
+ *
+ */
 window.toMarkdown = function(string) {
 
   var ELEMENTS = [
