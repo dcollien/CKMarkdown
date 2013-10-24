@@ -449,7 +449,8 @@ var inline = {
   reflink: /^!?\[(inside)\]\s*\[([^\]]*)\]/,
   nolink: /^!?\[((?:\[[^\]]*\]|[^\[\]])*)\]/,
   strong: /^__([\s\S]+?)__(?!_)|^\*\*([\s\S]+?)\*\*(?!\*)/,
-  em: /^\b_((?:__|[\s\S])+?)_\b|^\*((?:\*\*|[\s\S])+?)\*(?!\*)/,
+  u: /^\b_((?:__|[\s\S])+?)_\b/,
+  em: /^\*((?:\*\*|[\s\S])+?)\*(?!\*)/,
   code: /^(`+)\s*([\s\S]*?[^`])\s*\1(?!`)/,
   br: /^ {2,}\n(?!\s*$)/,
   del: noop,
@@ -480,7 +481,8 @@ inline.normal = merge({}, inline);
 
 inline.pedantic = merge({}, inline.normal, {
   strong: /^__(?=\S)([\s\S]*?\S)__(?!_)|^\*\*(?=\S)([\s\S]*?\S)\*\*(?!\*)/,
-  em: /^_(?=\S)([\s\S]*?\S)_(?!_)|^\*(?=\S)([\s\S]*?\S)\*(?!\*)/
+  u: /^_(?=\S)([\s\S]*?\S)_(?!_)/,
+  em: /^\*(?=\S)([\s\S]*?\S)\*(?!\*)/
 });
 
 /**
@@ -638,6 +640,15 @@ InlineLexer.prototype.output = function(src) {
       out += '<strong>'
         + this.output(cap[2] || cap[1])
         + '</strong>';
+      continue;
+    }
+
+    // u
+    if (cap = this.rules.u.exec(src)) {
+      src = src.substring(cap[0].length);
+      out += '<u>'
+        + this.output(cap[2] || cap[1])
+        + '</u>';
       continue;
     }
 
@@ -1164,13 +1175,7 @@ if (typeof exports === 'object') {
   return this || (typeof window !== 'undefined' ? window : global);
 }());
 
-/*
- * to-markdown - an HTML to Markdown converter
- *
- * Copyright 2011, Dom Christie
- * Licenced under the MIT licence
- *
- */
+
 window.toMarkdown = function(string) {
 
   var ELEMENTS = [
@@ -1229,9 +1234,28 @@ window.toMarkdown = function(string) {
       }
     },
     {
-      patterns: ['i', 'em'],
+      patterns: ['u'],
       replacement: function(str, attrs, innerHTML) {
         return innerHTML ? '_' + innerHTML + '_' : '';
+      }
+    },
+    {
+      patterns: ['i', 'em'],
+      replacement: function(str, attrs, innerHTML) {
+        return innerHTML ? '*' + innerHTML + '*' : '';
+      }
+    },
+    {
+      patterns: 'pre',
+      replacement: function(str, attrs, innerHTML) {
+        innerHTML = innerHTML.replace(/^\s*<code>/i, '');
+        innerHTML = innerHTML.replace(/<\/code>\s*$/i, '');
+        var lines = innerHTML.split(/\n/g);
+        var i;
+        for (i = 0; i !== lines.length; ++i) {
+          lines[i] = '    ' + lines[i];
+        }
+        return lines.join('\n');
       }
     },
     {
@@ -1289,13 +1313,14 @@ window.toMarkdown = function(string) {
   }
   
   // Pre code blocks
-  
+  /*
   string = string.replace(/<pre\b[^>]*>`([\s\S]*?)`<\/pre>/gi, function(str, innerHTML) {
     innerHTML = innerHTML.replace(/^\t+/g, '  '); // convert tabs to spaces (you know it makes sense)
     innerHTML = innerHTML.replace(/\n/g, '\n    ');
     return '\n\n    ' + innerHTML + '\n';
   });
-  
+  */
+
   // Lists
 
   // Escape numbers that could trigger an ol
@@ -1343,6 +1368,11 @@ window.toMarkdown = function(string) {
     });
   }
   
+  // special characters
+  string = string.replace(/&nbsp;/g, ' ');
+  string = string.replace(/&#39;/g, "'");
+
+
   function replaceBlockquotes(html) {
     html = html.replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, function(str, inner) {
       inner = inner.replace(/^\s+|\s+$/g, '');
@@ -1360,11 +1390,9 @@ window.toMarkdown = function(string) {
     string = string.replace(/\n{3,}/g, '\n\n'); // limit consecutive linebreaks to 2
     return string;
   }
-  
+
   return cleanUp(string);
 };
-
-
 
 
 
